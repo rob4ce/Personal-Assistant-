@@ -1,5 +1,12 @@
-"""Part 1 - BODY (red): head+body+arms+wheels, with face recess, badge recess
-and calyx socket. Printability-first stylised interpretation."""
+"""01_Body_Red - Project Mater v1.5, built to the engineering brief.
+
+Tomato shell + torso + arms + decorative wheels + hidden flat base, with:
+- curved rounded-rect face recess (2 mm seat) + 4 locating-pin holes
+- chest badge recess (1.5 mm) + 2 locating-pin holes
+- keyed cross socket on top for the calyx
+- glue relief pockets behind cosmetic joints
+No headset geometry on the red body (it lives on the faceplate).
+"""
 import os
 import sys
 
@@ -12,61 +19,107 @@ import params as p
 OUT = os.path.join(os.path.dirname(__file__), "..", "output")
 
 
+def head_solid(scale=0.0):
+    """Head ellipsoid, optionally shrunk by `scale` mm on every radius."""
+    return c.ellipsoid((p.HEAD_RX - scale, p.HEAD_RY - scale, p.HEAD_RZ - scale),
+                       center=(0, 0, p.HEAD_CZ), subdiv=5)
+
+
+def head_surf_y(x, z):
+    """Front (+Y) surface height of the head ellipsoid at (x, z)."""
+    t = 1 - (x / p.HEAD_RX) ** 2 - ((z - p.HEAD_CZ) / p.HEAD_RZ) ** 2
+    return p.HEAD_RY * np.sqrt(max(t, 0.01))
+
+
 def build_body():
-    # --- main rounded body/head (one chibi blob) ---
-    body = c.ellipsoid((p.BODY_RX, p.BODY_RY, p.BODY_RZ), center=(0, 0, p.BODY_CZ), subdiv=5)
+    head = head_solid()
+    torso = c.ellipsoid((p.TORSO_RX, p.TORSO_RY, p.TORSO_RZ), center=(0, 2, p.TORSO_CZ), subdiv=5)
 
-    # subtle cheek widening low down for a friendlier squat silhouette
-    belly = c.ellipsoid((p.BODY_RX * 1.02, p.BODY_RY * 1.05, p.BODY_RZ * 0.5),
-                        center=(0, 2, p.BODY_CZ - 14), subdiv=5)
-    body = c.union([body, belly])
+    # hidden flat base pad (stable 46 x 34 footprint, flat bottom at z=0)
+    base = c.rounded_rect_prism(p.BASE_W, p.BASE_D, p.BASE_Z, fillet=8,
+                                center=(0, 2, p.BASE_Z / 2), axis="z")
 
-    # --- arms: stubby capsules tucked down against the sides (no supports) ---
-    arm_l = c.capsule(p.ARM_R, 20, center=(-p.BODY_RX + 2, 6, 34), axis="z")
-    arm_r = c.capsule(p.ARM_R, 20, center=(p.BODY_RX - 2, 6, 34), axis="z")
-    # tilt them slightly outward at the bottom
-    for arm, s in ((arm_l, -1), (arm_r, 1)):
+    body = c.union([head, torso, base])
+
+    # --- arms: stubby, tucked down (<=45deg overhang, no supports) ---
+    arms = []
+    for s in (-1, 1):
+        arm = c.capsule(7.0, 16, center=(s * (p.TORSO_RX - 1), 6, 22), axis="z")
         arm.apply_transform(trimesh.transformations.rotation_matrix(
-            s * np.deg2rad(12), [0, 1, 0], point=(s * (p.BODY_RX - 2), 6, 44)))
-    # little rounded hands
-    hand_l = c.sphere(p.ARM_R * 1.05, center=(-p.BODY_RX - 1, 8, 26))
-    hand_r = c.sphere(p.ARM_R * 1.05, center=(p.BODY_RX + 1, 8, 26))
+            s * np.deg2rad(14), [0, 1, 0], point=(s * (p.TORSO_RX - 1), 6, 30)))
+        hand = c.sphere(7.5, center=(s * (p.TORSO_RX + 2), 9, 14))
+        arms += [arm, hand]
+    body = c.union([body] + arms)
 
-    # --- wheels/feet: flattened rounded feet giving a stable base ---
-    foot_l = c.ellipsoid((p.WHEEL_R, p.WHEEL_R * 1.25, p.WHEEL_R * 0.9), center=(-15, 6, 9))
-    foot_r = c.ellipsoid((p.WHEEL_R, p.WHEEL_R * 1.25, p.WHEEL_R * 0.9), center=(15, 6, 9))
+    # --- 4 decorative wheels (float ~0.5 mm above the desk) + axles to the base ---
+    wheels = []
+    wr = 8.0
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cy = sy * 14 + 2
+            hub = c.cylinder(wr, 8, center=(sx * 32, cy, wr + p.WHEEL_FLOAT), axis="x")
+            axle = c.segment((sx * 21, cy, 4.5), (sx * 33, cy, 4.5), 3.0)  # base -> wheel
+            wheels += [hub, axle]
+    body = c.union([body] + wheels)
 
-    body = c.union([body, arm_l, arm_r, hand_l, hand_r, foot_l, foot_r])
-
-    # --- flatten the very bottom for a clean first layer on the print bed ---
-    floor_cut = trimesh.creation.box(extents=(200, 200, 20))
-    floor_cut.apply_translation((0, 0, -10 + 3.0))  # keep floor at z=3
-    body = c.difference(body, floor_cut)
-
-    # --- face recess (oval pocket on the upper front) ---
-    face_pocket = c.ellipsoid((p.FACE_HALF_W, p.FACE_DEPTH * 2.2, p.FACE_HALF_H),
-                              center=(0, p.BODY_RY + p.FACE_DEPTH * 1.4, p.FACE_CZ), subdiv=5)
-    body = c.difference(body, face_pocket)
-
-    # --- badge recess (smaller oval on the belly) ---
-    badge_pocket = c.ellipsoid((p.BADGE_HALF_W, p.BADGE_DEPTH * 2.0, p.BADGE_HALF_H),
-                               center=(0, p.BODY_RY + p.BADGE_DEPTH * 0.7, p.BADGE_CZ), subdiv=5)
-    body = c.difference(body, badge_pocket)
-
-    # --- calyx socket on top (blind cylindrical hole for the stem peg) ---
-    socket = c.cylinder(p.STEM_R + p.CLEARANCE, p.STEM_DEPTH * 2,
-                        center=(0, 0, p.BODY_TOP_Z - 2), axis="z")
+    # --- top dimple + keyed calyx socket ---
+    dimple = c.sphere(9, center=(0, 0, p.HEAD_CZ + p.HEAD_RZ + 3))
+    body = c.difference(body, dimple)
+    top_z = body.bounds[1][2]
+    socket = c.cross_key(p.CALYX_KEY_MAJOR, p.CALYX_KEY_ARM, p.CALYX_ENGAGE * 2 + 2,
+                         center=(0, 0, top_z - p.CALYX_ENGAGE + 1), axis="z",
+                         clearance=p.CALYX_CLEAR)
     body = c.difference(body, socket)
 
-    c.set_color(body, c.RED)
+    # --- curved rounded-rect FACE recess (2 mm seat, conforms to tomato) ---
+    seat_shell = c.difference(head_solid(), head_solid(scale=p.FACE_SEAT_DEPTH))
+    # front-only prism (spans y=0..60) so the back of the head is untouched.
+    face_prism = c.rounded_rect_prism(p.FACE_W, p.FACE_H, 60, p.FACE_FILLET,
+                                      center=(0, 30, p.FACE_CZ), axis="y")
+    face_seat = c.intersection([seat_shell, face_prism])
+    body = c.difference(body, face_seat)
+
+    # extra blind cavity so the face reads recessed (eye depth behind panel)
+    cav_shell = c.difference(head_solid(scale=p.FACE_SEAT_DEPTH), head_solid(scale=p.FACE_SEAT_DEPTH + 6))
+    cav_prism = c.rounded_rect_prism(p.FACE_W - 2 * p.FACE_SHOULDER, p.FACE_H - 2 * p.FACE_SHOULDER,
+                                     60, p.FACE_FILLET, center=(0, 30, p.FACE_CZ), axis="y")
+    body = c.difference(body, c.intersection([cav_shell, cav_prism]))
+
+    # --- faceplate locating-pin holes (drilled inward from the local surface) ---
+    for sx, sz in ((-1, 1), (1, 1), (-1, -1), (1, -1)):
+        cx, cz = sx * p.FACE_PIN_DX, p.FACE_CZ + sz * p.FACE_PIN_DZ
+        ys = head_surf_y(cx, cz)
+        L = p.FACE_PIN_ENGAGE + 5
+        hole = c.cylinder(p.FACE_PIN_D / 2 + p.FACE_CLEAR, L,
+                          center=(cx, ys + 1 - L / 2, cz), axis="y")
+        body = c.difference(body, hole)
+
+    # --- chest BADGE recess (flat-floored oval pocket, ~1.5 mm) + 2 pin holes ---
+    # front surface of the torso near the badge, then cut a flat oval pocket.
+    y_surf = 2 + p.TORSO_RY * np.sqrt(max(1 - ((p.BADGE_CZ - p.TORSO_CZ) / p.TORSO_RZ) ** 2, 0.01))
+    puck = c.cylinder(1.0, 6.0, center=(0, y_surf - p.BADGE_RECESS + 3.0, p.BADGE_CZ), axis="y", sections=96)
+    puck.apply_scale((p.BADGE_W / 2, 1, p.BADGE_H / 2))
+    puck = c.union([puck])  # re-tessellate cleanly after scaling
+    body = c.difference(body, puck)
+    for sx in (-1, 1):
+        hole = c.cylinder(p.BADGE_PIN_D / 2 + p.BADGE_CLEAR, p.BADGE_PIN_ENGAGE + 3,
+                          center=(sx * p.BADGE_PIN_SPACING / 2, p.TORSO_RY - 2, p.BADGE_CZ), axis="y")
+        body = c.difference(body, hole)
+
+    # --- clean flat bottom at the desk plane ---
+    body = c.difference(body, c.box((200, 200, 20), center=(0, 0, -10)))
+
+    c.set_color(body, p.RED)
     return body
 
 
 if __name__ == "__main__":
     body = build_body()
-    print("watertight:", body.is_watertight, "| volume(cm^3):", round(body.volume / 1000, 1))
-    print("bounds:", np.round(body.bounds, 1).tolist())
+    ext = body.extents
+    print("watertight:", body.is_watertight)
+    print(f"W x D x H = {ext[0]:.1f} x {ext[1]:.1f} x {ext[2]:.1f} mm (target 72 x 60 x 92)")
+    print("volume(cm^3):", round(body.volume / 1000, 1))
     os.makedirs(OUT, exist_ok=True)
-    body.export(os.path.join(OUT, "1_body_red.3mf"))
-    body.export(os.path.join(OUT, "1_body_red.stl"))
-    print("exported 1_body_red.3mf / .stl")
+    body.export(os.path.join(OUT, "01_Body_Red.3mf"))
+    body.export(os.path.join(OUT, "01_Body_Red.stl"))
+    print("exported 01_Body_Red")

@@ -1,37 +1,48 @@
-"""Render all four parts assembled together, plus an exploded view."""
+"""Build all four parts in their assembled positions and render assembled +
+exploded previews. Also exports an assembled 3MF for viewing."""
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 import numpy as np
 import trimesh
-from render import render
 import common as c
+import params as p
+from render import render
+from build_body import build_body
+from build_faceplate import build_faceplate
+from build_badge import build_badge
+from build_calyx import build_calyx
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "output")
+PRE = os.path.join(os.path.dirname(__file__), "..", "preview")
+
+body = build_body()
+face = build_faceplate()
+badge = build_badge()
+top_z = body.bounds[1][2]
+calyx = build_calyx(z0=top_z)
 
 parts = [
-    ("1_body_red.stl", [214, 40, 40]),
-    ("2_faceplate_black.stl", [26, 26, 26]),
-    ("3_badge_white.stl", [245, 245, 245]),
-    ("4_calyx_green.stl", [90, 160, 45]),
+    (body, p.RED[:3]),
+    (face, p.BLACK[:3]),
+    (badge, p.WHITE[:3]),
+    (calyx, p.GREEN[:3]),
 ]
+render(parts, os.path.join(PRE, "assembly_v1_5.png"),
+       title="Project Mater v1.5 - assembled")
 
-meshes_colors = []
-for fn, col in parts:
-    m = trimesh.load(os.path.join(OUT, fn), force="mesh")
-    meshes_colors.append((m, col))
+# Exploded along insertion axes.
+offs = [(0, 0, 0), (0, 26, 0), (0, 22, 0), (0, 0, 30)]
+xparts = []
+for (m, col), off in zip(parts, offs):
+    mm = m.copy(); mm.apply_translation(off); xparts.append((mm, col))
+render(xparts, os.path.join(PRE, "exploded_v1_5.png"),
+       title="Project Mater v1.5 - exploded")
 
-render(meshes_colors, os.path.join(os.path.dirname(__file__), "..", "preview", "assembly_v01.png"),
-       title="TomatoStar v0.1 - assembled (4 parts)")
-
-# Exploded: shift parts outward along their insertion axes.
-explode = [(0, 0, 0), (0, 22, 0), (0, 20, 0), (0, 0, 26)]
-meshes_colors_x = []
-for (m, col), off in zip(meshes_colors, explode):
-    mm = m.copy()
-    mm.apply_translation(off)
-    meshes_colors_x.append((mm, col))
-render(meshes_colors_x, os.path.join(os.path.dirname(__file__), "..", "preview", "exploded_v01.png"),
-       title="TomatoStar v0.1 - exploded")
-print("done")
+# Assembled 3MF for viewing (colored scene).
+scene = trimesh.Scene()
+for m, col in parts:
+    mm = m.copy(); c.set_color(mm, list(col) + [255]); scene.add_geometry(mm)
+scene.export(os.path.join(OUT, "Mater_v1_5_Assembly.3mf"))
+print("rendered + exported assembly")

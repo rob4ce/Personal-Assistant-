@@ -1,5 +1,9 @@
-"""Part 4 - CALYX (green): leaf crown + stem, with a peg that drops into the
-socket on top of the body."""
+"""04_Calyx_Green - Project Mater v1.5.
+
+Morning-Star-style calyx: thick, smoothly-blended leaves (FDM-friendly) on a
+short stem, with a KEYED cross peg (8 mm major) + shoulder stop that drops into
+the body socket. Overall ~52 mm leaf-tip to tip, ~34 mm tall.
+"""
 import os
 import sys
 
@@ -14,44 +18,49 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "output")
 N_LEAVES = 6
 
 
-def build_calyx():
-    top = p.BODY_TOP_Z - 2  # rim of the socket
+def build_calyx(z0=0.0):
+    """z0 = body top surface height (socket rim). Defaults to 0 for a standalone
+    part sitting on the print bed."""
+    parts = []
 
-    # Downward peg into the body socket (slip fit).
-    peg = c.cylinder(p.STEM_R - p.CLEARANCE, p.STEM_DEPTH,
-                     center=(0, 0, top - p.STEM_DEPTH / 2 + 1), axis="z", sections=48)
+    # Keyed cross peg (points down, -Z) with a lead-in chamfer, minus clearance.
+    peg = c.cross_key(p.CALYX_KEY_MAJOR, p.CALYX_KEY_ARM, p.CALYX_ENGAGE,
+                      center=(0, 0, z0 - p.CALYX_ENGAGE / 2 + 0.5), axis="z")
+    # chamfer the peg tip so it self-centres
+    tip_cone = c._frustum(p.CALYX_KEY_MAJOR * 0.75, p.CALYX_KEY_MAJOR * 0.3, p.CALYX_CHAMFER)
+    parts.append(peg)
 
-    # Central hub sitting on the body top.
-    hub = c.ellipsoid((7, 7, 4), center=(0, 0, top + 2), subdiv=4)
+    # Shoulder / hub that bottoms on the head (sits just below the top surface).
+    hub = c.ellipsoid((9.5, 9.5, 4.5), center=(0, 0, z0 - 1), subdiv=4)
+    parts.append(hub)
 
-    parts = [peg, hub]
-
-    # Radiating leaves: flattened, tapered ellipsoids tilted up and outward.
+    # Thick tapered leaves splaying OUT and DOWN over the tomato's crown, so the
+    # calyx adds only ~8 mm of height (leaf tips droop to the head shoulders).
     for i in range(N_LEAVES):
         ang = 2 * np.pi * i / N_LEAVES
-        leaf = c.ellipsoid((11, 3.2, 2.2), center=(0, 0, 0), subdiv=4)   # long, flat, thin
-        # taper to a point by shifting: use as-is; ellipsoid reads as a leaf
-        leaf.apply_transform(trimesh.transformations.rotation_matrix(np.deg2rad(-22), [0, 1, 0]))
-        leaf.apply_translation((9, 0, 0))
+        leaf = c.ellipsoid((15, 4.2, 2.8), center=(0, 0, 0), subdiv=4)
+        leaf.apply_transform(trimesh.transformations.rotation_matrix(np.deg2rad(26), [0, 1, 0]))  # tip down
+        leaf.apply_translation((13, 0, 0))
         leaf.apply_transform(trimesh.transformations.rotation_matrix(ang, [0, 0, 1]))
-        leaf.apply_translation((0, 0, top + 3))
+        leaf.apply_translation((0, 0, z0 - 1))
         parts.append(leaf)
 
-    # Little top sprig.
-    sprig = c.cylinder(1.8, 8, center=(0, 0, top + 7), axis="z", sections=24)
-    tip = c.sphere(2.2, center=(0, 0, top + 11))
-    parts += [sprig, tip]
+    # Central stem sprig poking up (this is the only part that adds height).
+    sprig = c.cylinder(2.2, 7, center=(0, 0, z0 + 2.5), axis="z", sections=32)
+    knob = c.sphere(2.6, center=(0, 0, z0 + 6.5))
+    parts += [sprig, knob]
 
     calyx = c.union(parts)
-    c.set_color(calyx, c.GREEN)
+    c.set_color(calyx, p.GREEN)
     return calyx
 
 
 if __name__ == "__main__":
     m = build_calyx()
-    print("watertight:", m.is_watertight, "| bounds:", np.round(m.bounds, 1).tolist())
-    print("top of calyx z =", round(m.bounds[1][2], 1))
+    m.apply_translation((0, 0, -m.bounds[0][2]))  # drop onto the bed for a standalone part
+    print("watertight:", m.is_watertight, "| ext:", [round(x, 1) for x in m.extents],
+          "(target 52 wide x 34 tall)")
     os.makedirs(OUT, exist_ok=True)
-    m.export(os.path.join(OUT, "4_calyx_green.3mf"))
-    m.export(os.path.join(OUT, "4_calyx_green.stl"))
-    print("exported 4_calyx_green")
+    m.export(os.path.join(OUT, "04_Calyx_Green.3mf"))
+    m.export(os.path.join(OUT, "04_Calyx_Green.stl"))
+    print("exported 04_Calyx_Green")
