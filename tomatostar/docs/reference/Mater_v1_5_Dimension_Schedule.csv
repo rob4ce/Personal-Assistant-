@@ -1,0 +1,33 @@
+Parameter,Nominal,Unit,CAD note
+Overall assembled height,100,mm,Includes calyx
+Overall width,72,mm,Wheel-to-wheel / widest point
+Overall depth,60,mm,Front face to rear shell
+Body height without calyx,92,mm,Red body assembly
+Hidden base contact width,46,mm,Target stable flat footprint
+Hidden base contact depth,34,mm,Keep invisible in front/side views
+Nominal shell wall,2.5,mm,Use 2.5-3.0 mm around large cavities
+Faceplate visible width,58,mm,Rounded rectangle
+Faceplate visible height,36,mm,Rounded rectangle
+Faceplate perimeter shoulder,1.0,mm,Stops insert at final depth
+Faceplate seating depth,2.0,mm,Recess in red body
+Faceplate locating pins,4,count,"Tapered, symmetric but keyed"
+Faceplate pin diameter,3.0,mm,At nominal shaft
+Faceplate pin engagement,4.0,mm,Do not exceed wall/rib space
+Faceplate clearance trial,0.15-0.25,mm/side,Validate with coupon on actual printer
+Logo badge width,40,mm,White oval insert
+Logo badge height,24,mm,White oval insert
+Logo badge thickness,2.0,mm,Slightly domed face optional
+Logo recess depth,1.5,mm,Badge sits proud by about 0.5 mm
+Logo locating pins,2,count,Prevents rotation/crooked installation
+Logo pin diameter,2.5,mm,Nominal
+Logo pin spacing,22,mm,Center-to-center
+Logo clearance trial,0.15-0.25,mm/side,Validate with coupon
+Calyx overall width,52,mm,Leaf tip to leaf tip
+Calyx overall height,34,mm,Stem plus leaf crown
+Calyx keyed peg major width,8.0,mm,"Use D, cross, or double-flat key"
+Calyx peg engagement,6.0,mm,Add lead-in chamfer
+Calyx clearance trial,0.20-0.30,mm/side,Larger due to top-surface print variability
+Glue relief pocket depth,0.4,mm,Behind faceplate/badge contact surfaces
+Glue relief pocket width,1.0-1.5,mm,"Small channels, hidden from view"
+Edge fillet,0.8-1.5,mm,"Larger where visual, smaller at joints"
+Eye recess depth,0.8-1.0,mm,For white paint marker or UV resin fill
