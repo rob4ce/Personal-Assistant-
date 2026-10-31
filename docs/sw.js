@@ -1,6 +1,6 @@
 // Cache-first service worker: after the first visit the board launches with no
 // network at all, which is the whole point on a soccer sideline.
-const CACHE = "eagles-board-v1";
+const CACHE = "eagles-board-v2";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-180.png", "./icon-512.png"];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
