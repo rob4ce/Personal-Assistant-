@@ -570,6 +570,14 @@ function gFlush(){
 }
 function clockSecs(){ const g=state.game; return g.elapsed + (g.running ? Math.max(0,(Date.now()-g.startedAt)/1000) : 0); }
 function playerSecs(id){ const g=state.game; return (g.minutes[id]||0) + (g.running && state.field.includes(id) ? Math.max(0,(Date.now()-g.startedAt)/1000) : 0); }
+// Day total: this game plus every game already saved with today's date —
+// the number that says who needs catching up later in a tournament day.
+function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function daySecs(id){
+  let t = playerSecs(id);
+  for(const e of state.season){ if(e.d===todayStr()) t += (e.mins[id]||0); }
+  return t;
+}
 const HALF_LEN = 25*60;   // the Eagles play two 25-minute halves
 const HT_LEN = 5*60;      // 5-minute halftime break
 function fmtClock(s){ s=Math.floor(s); return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0"); }
@@ -601,7 +609,9 @@ function applyMins(el){
   // field pucks show the bare number, big; bench and log keep the "m" suffix
   el.textContent = el.classList.contains("mins")
     ? String(Math.floor(playerSecs(id)/60))
-    : fmtMin(playerSecs(id));
+    : (tourney() && el.classList.contains("mv")
+        ? fmtMin(playerSecs(id)) + " · " + fmtMin(daySecs(id)) + " today"
+        : fmtMin(playerSecs(id)));
   for(const c of ["low","risk","met"]) el.classList.toggle(c, st===c);
   const btn = el.parentElement;
   if(!btn) return;
@@ -779,7 +789,9 @@ function renderLog(){
   });
   const mt = $("minstable");
   mt.innerHTML = "";
-  const sorted = [...ROSTER].sort((a,b)=>playerSecs(b.id)-playerSecs(a.id));
+  const sorted = tourney()
+    ? [...ROSTER].sort((a,b)=>daySecs(b.id)-daySecs(a.id))
+    : [...ROSTER].sort((a,b)=>playerSecs(b.id)-playerSecs(a.id));
   for(const p of sorted){
     const row = document.createElement("div"); row.className="minrow";
     const mn = document.createElement("span"); mn.className="mn"; mn.textContent = p.first;
