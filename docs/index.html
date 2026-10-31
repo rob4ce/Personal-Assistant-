@@ -1,0 +1,1277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e3a5f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Eagles Board">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>body{margin:0;padding-top:env(safe-area-inset-top,0px)}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Eagles Lineup Board</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&amp;display=swap">
+<style>
+  :root{
+    --bg:#f4f5f1; --surface:#ffffff; --ink:#1c2420; --muted:#5d6a62;
+    --line:#dfe3dc; --navy:#1e3a5f; --navy-ink:#ffffff; --gold:#d9a62e;
+    --chip:#ffffff; --chip-ink:#1c2420; --chip-line:#c9cfc6;
+    --ok:#2e7d46; --bad:#b3403a; --warn:#a86414; --sel:#2b6fd4;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#10150f; --surface:#1a211b; --ink:#e8ece6; --muted:#9aa79d;
+      --line:#2a332b; --navy:#16283f; --navy-ink:#e8ece6; --gold:#e0b04a;
+      --chip:#222b23; --chip-ink:#e8ece6; --chip-line:#3a453b;
+      --ok:#5fbc82; --bad:#e07a70; --warn:#e0a45a; --sel:#6aa5f2;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#10150f; --surface:#1a211b; --ink:#e8ece6; --muted:#9aa79d;
+    --line:#2a332b; --navy:#16283f; --navy-ink:#e8ece6; --gold:#e0b04a;
+    --chip:#222b23; --chip-ink:#e8ece6; --chip-line:#3a453b;
+    --ok:#5fbc82; --bad:#e07a70; --warn:#e0a45a; --sel:#6aa5f2;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+    padding-inline:12px; padding-block:0 calc(76px + env(safe-area-inset-bottom));
+    max-width:520px; margin-inline:auto;
+    display:flex; flex-direction:column; gap:10px;
+    min-height:100dvh;
+  }
+  header.bar{
+    background:var(--navy); color:var(--navy-ink);
+    margin-inline:-12px; padding:10px 16px;
+    display:flex; align-items:baseline; justify-content:space-between; gap:8px;
+  }
+  .wordmark{font-weight:800; font-size:19px; letter-spacing:.04em; text-transform:uppercase}
+  .wordmark .u9{color:var(--gold); font-size:12px; letter-spacing:.14em; margin-left:6px}
+  .savestate{font-size:11px; letter-spacing:.06em; opacity:.85}
+  .savestate.ok::before{content:"✓ "; color:var(--gold)}
+
+  .tabpage{display:flex; flex-direction:column; gap:10px}
+
+  /* --- bottom tab bar --- */
+  .tabs{
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:520px; z-index:20;
+    display:flex; background:var(--surface); border-top:1px solid var(--line);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .tabs button{
+    flex:1; border:none; background:none; padding:9px 0 7px;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    font:600 11px/1 "Archivo",sans-serif; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted);
+  }
+  .tabs button .ic{font-size:19px; line-height:1}
+  .tabs button[aria-selected="true"]{color:var(--gold); font-weight:700}
+  .tabs button:focus-visible{outline:2px solid var(--gold); outline-offset:-2px}
+
+  /* --- game tab: clock strip --- */
+  .clockstrip{display:flex; align-items:center; justify-content:space-between; gap:10px}
+  .clockmain{display:flex; flex-direction:column; gap:3px}
+  .halftag{font:700 11px/1 "Archivo",sans-serif; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+  .clock{font-weight:800; font-size:clamp(36px,12vw,46px); line-height:1; font-variant-numeric:tabular-nums}
+  .clock.ht{color:var(--warn)}
+  .clock.over{color:var(--bad)}
+  .nextline{font:600 12px/1.3 "Archivo",sans-serif; color:var(--gold)}
+  .clockbtns{display:flex; flex-direction:column; gap:6px; align-items:stretch}
+  .clockbtns button{border:1.5px solid var(--chip-line); background:var(--chip); color:var(--chip-ink); border-radius:999px; padding:9px 16px; font:600 13px/1 "Archivo",sans-serif; white-space:nowrap}
+  #clockbtn.live{border-color:var(--ok); color:var(--ok)}
+  .clockbtns button:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+
+  .scorerow{display:flex; align-items:center; gap:10px}
+  .score{flex:1; display:flex; justify-content:center; align-items:baseline; gap:10px; font-weight:800; font-size:30px; font-variant-numeric:tabular-nums}
+  .score .d{color:var(--muted); font-size:20px}
+  .goalbtn{border:1.5px solid var(--chip-line); background:var(--chip); color:var(--chip-ink); border-radius:10px; padding:8px 12px; font:700 14px/1.15 "Archivo",sans-serif; text-align:center; min-width:72px}
+  .goalbtn span{display:block; font-size:9.5px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--muted)}
+  .goalbtn.us{border-color:var(--gold)}
+  .goalbtn.us span{color:var(--gold)}
+  .goalbtn:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+
+  .pitchwrap{display:flex; justify-content:center}
+  .pitch{
+    position:relative; width:100%;
+    max-width:min(100%, max(240px, calc((100dvh - 460px) * 10 / 13.4)));
+    aspect-ratio:10/13.4; border-radius:10px; overflow:hidden;
+    background:repeating-linear-gradient(180deg,#2e7d46 0 12.5%,#28703f 12.5% 25%);
+    box-shadow:0 1px 4px rgba(0,0,0,.25);
+    touch-action:manipulation;
+    container-type:inline-size;
+  }
+  .pitch svg{position:absolute; inset:0; width:100%; height:100%}
+  .spot{
+    position:absolute; width:19.5%; aspect-ratio:1; border-radius:50%;
+    transform:translate(-50%,-50%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    border:0; padding:0; font-family:inherit;
+  }
+  .spot.empty{
+    background:rgba(255,255,255,.10); border:2px dashed rgba(255,255,255,.75);
+    color:rgba(255,255,255,.92); font:700 13px/1 "Archivo",sans-serif; letter-spacing:.08em;
+    font-size:3.2cqw;
+  }
+  .spot.filled{
+    background:#fafaf7; color:#16211a;
+    border:2px solid rgba(0,0,0,.18);
+    box-shadow:0 2px 5px rgba(0,0,0,.35);
+    font-weight:700; font-size:clamp(10px,3.5vw,15px); font-size:3.7cqw; line-height:1.05;
+    overflow:hidden; padding:2px;
+  }
+  .spot.filled.longname{font-size:clamp(9px,2.9vw,12px); font-size:2.9cqw}
+  .spot.filled.lowfield{background:#ffd98f; border-color:#b06a1c}
+  .spot.filled.riskfield{background:#ffb3a8; border-color:#a62e24}
+  .spot.filled.metfield{background:#8fe3a5; border-color:#1f5c33}
+  .spot.filled.gk{background:#ff8c1a}
+  .spot.sel{outline:4px solid var(--sel); outline-offset:2px}
+  .spot .mins{display:block; font-weight:700; font-size:15px; font-size:5.4cqw; color:#4c5a50; letter-spacing:.02em}
+  .spot .mins.low{color:#a85f13; font-weight:700}
+  .spot .mins.risk{color:#8f221a; font-weight:700}
+  .spot .mins.met{color:#1f5c33; font-weight:700}
+
+  .box{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:10px 12px}
+  .boxhead{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px}
+  .boxhead h2{margin:0; font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+  .bench{display:flex; flex-wrap:wrap; gap:8px}
+  .bench:empty::after{content:"Bench is empty — everyone's on."; font-size:12px; color:var(--muted)}
+  .bench button{
+    background:var(--chip); color:var(--chip-ink); border:1.5px solid var(--chip-line);
+    border-radius:999px; padding:10px 15px; font:600 15px/1 "Archivo",sans-serif;
+  }
+  .bench button.sel{border-color:var(--sel); outline:2.5px solid var(--sel); outline-offset:-1px}
+  .bench button:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+  .bench .mins-inline{font-weight:500; font-size:12.5px; color:var(--muted); margin-left:6px}
+  .bench .mins-inline.low{color:var(--warn); font-weight:700}
+  .bench button.low{border-color:var(--warn)}
+  .bench .mins-inline.risk{color:var(--bad); font-weight:700}
+  .bench button.risk{border-color:var(--bad); border-width:2px}
+  .bench .mins-inline.met{color:var(--ok); font-weight:700}
+  .bench button.met{border-color:var(--ok); border-width:2px}
+
+  .hint{min-height:16px; font-size:12px; color:var(--muted); text-align:center; text-wrap:balance}
+
+  /* --- log tab --- */
+  .scoreline{display:flex; justify-content:center; align-items:baseline; gap:10px; font-weight:800; font-size:26px; font-variant-numeric:tabular-nums}
+  .scoreline .lbl{font-size:12px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+  .goallog{display:flex; flex-direction:column; gap:6px}
+  .goallog:empty::after{content:"No goals yet."; font-size:12px; color:var(--muted)}
+  .goalrow{display:flex; align-items:center; gap:8px; font-size:13.5px}
+  .goalrow .when{color:var(--muted); font-variant-numeric:tabular-nums; letter-spacing:.04em; white-space:nowrap}
+  .goalrow .who{flex:1; font-weight:600; min-width:0}
+  .goalrow .who .as{font-weight:500; color:var(--muted)}
+  .goalrow button{border:none; background:none; color:var(--muted); font-size:14px; padding:4px 6px}
+  .goalrow button:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+  .minstable{display:flex; flex-direction:column; gap:5px}
+  .minrow{display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:13.5px}
+  .minrow .mn{font-weight:600}
+  .minrow .mn.on::before{content:"● "; color:var(--ok); font-size:10px}
+  .boxhead .legend{font-size:10.5px; font-weight:600; color:var(--ok); letter-spacing:.02em}
+  .minrow .mn .inj{color:var(--bad); font-size:11px; margin-left:5px}
+  .minrow .mv{font-variant-numeric:tabular-nums; color:var(--muted); font-weight:600}
+  .minrow .mv.low{color:var(--warn); font-weight:700}
+  .minrow .mv.risk{color:var(--bad); font-weight:700}
+  .minrow .mv.met{color:var(--ok); font-weight:700}
+
+  /* --- setup tab --- */
+  .formations{display:flex; gap:6px}
+  .formations button{
+    flex:1; border:1.5px solid var(--chip-line); background:var(--chip);
+    color:var(--chip-ink); border-radius:999px; padding:9px 0;
+    font:600 12.5px/1 "Archivo",sans-serif; letter-spacing:.08em;
+  }
+  .formations button[aria-pressed="true"]{background:var(--gold); border-color:var(--gold); color:#1e2a1f}
+  .formations button:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+  .injhead{display:flex; align-items:baseline; gap:6px; margin-bottom:8px}
+  .injhead h2{margin:0; font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--bad)}
+  .injhead h2::before{content:"✚ "; letter-spacing:0}
+  .injured{display:flex; flex-wrap:wrap; gap:8px}
+  .injured:empty::after{content:"No injuries — knock on wood."; font-size:12px; color:var(--muted)}
+  .injured button{
+    background:var(--chip); color:var(--chip-ink); border:1.5px dashed var(--bad);
+    border-radius:12px; padding:7px 12px; font-family:"Archivo",sans-serif;
+    text-align:left; line-height:1.2;
+  }
+  .injured button .nm{display:block; font-weight:600; font-size:14px; text-decoration:line-through; text-decoration-color:var(--bad); text-decoration-thickness:1.5px}
+  .injured button .note{display:block; font-size:10.5px; color:var(--muted); letter-spacing:.02em}
+  .injured button:focus-visible{outline:2px solid var(--bad); outline-offset:2px}
+  .setupnote{font-size:12px; color:var(--muted); margin:0 0 8px}
+  .absent{display:flex; flex-wrap:wrap; gap:8px}
+  .absent:empty::after{content:"Everyone's available."; font-size:12px; color:var(--muted)}
+  .absent button{
+    background:var(--chip); color:var(--muted); border:1.5px dashed var(--chip-line);
+    border-radius:999px; padding:9px 14px; font:600 14px/1 "Archivo",sans-serif;
+    text-decoration:line-through;
+  }
+  .absent button:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+  .setupactions{display:flex; flex-direction:column; gap:8px}
+  .setupactions button{
+    border:1.5px solid var(--chip-line); background:var(--chip); color:var(--chip-ink);
+    border-radius:10px; padding:12px; font:600 14px/1 "Archivo",sans-serif; text-align:center;
+  }
+  .setupactions button.danger{border-color:var(--bad); color:var(--bad)}
+  .setupactions button:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+
+  /* --- season tab --- */
+  .recordline{font-size:14px; font-weight:600}
+  .gamelist{display:flex; flex-direction:column; gap:8px}
+  .gamelist:empty::after{content:"No games yet."; font-size:12px; color:var(--muted)}
+  .gtop{display:flex; align-items:center; gap:6px}
+  .ghead{flex:1; display:flex; align-items:center; justify-content:space-between; gap:8px; border:none; background:none; padding:4px 0; font:600 14px/1.2 "Archivo",sans-serif; color:var(--ink); text-align:left; min-width:0}
+  .ghead .ginfo{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .gres{font:700 12px/1 "Archivo",sans-serif; padding:5px 9px; border-radius:999px; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .gres.w{color:var(--ok); border:1.5px solid var(--ok)}
+  .gres.l{color:var(--bad); border:1.5px solid var(--bad)}
+  .gres.d{color:var(--muted); border:1.5px solid var(--chip-line)}
+  .gdel{border:none; background:none; color:var(--muted); font-size:14px; padding:4px 6px; font-family:inherit}
+  .gdetail{padding:2px 0 6px 4px; display:flex; flex-direction:column; gap:3px; font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums}
+  .seasontable{display:flex; flex-direction:column; gap:5px}
+  .srow{display:grid; grid-template-columns:1fr 32px 32px 32px 44px 44px; gap:4px; font-size:13.5px; font-variant-numeric:tabular-nums; align-items:baseline}
+  .srow span{text-align:right}
+  .srow span:first-child{text-align:left; font-weight:600}
+  .srow.shead span{color:var(--muted); font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+  .ghead:focus-visible,.gdel:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+
+  .oppinput{
+    width:100%; border:1.5px solid var(--chip-line); background:var(--chip); color:var(--chip-ink);
+    border-radius:10px; padding:11px 12px; font:600 14px/1 "Archivo",sans-serif; margin-bottom:8px;
+  }
+  .oppinput::placeholder{color:var(--muted); font-weight:500}
+  .oppinput:focus-visible{outline:2px solid var(--gold); outline-offset:1px}
+  .savebtn{
+    width:100%; border:1.5px solid var(--ok); background:var(--chip); color:var(--ok);
+    border-radius:10px; padding:12px; font:700 14px/1 "Archivo",sans-serif; text-align:center;
+  }
+  .savebtn:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+  #saveblock .oppinput{margin-bottom:8px}
+  .copybtn{
+    width:100%; border:1.5px solid var(--chip-line); background:none; color:var(--muted);
+    border-radius:999px; padding:10px; font:600 13px/1 "Archivo",sans-serif; text-align:center;
+  }
+  .copybtn:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+  #saveblock .copybtn{margin-bottom:8px}
+  .minrow .mix{font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; text-align:right}
+
+  /* --- goal sheet --- */
+  .sheetback{position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:30; display:flex; align-items:flex-end; justify-content:center}
+  .sheet{
+    background:var(--surface); color:var(--ink); width:100%; max-width:520px;
+    border-radius:16px 16px 0 0; padding:16px 16px calc(16px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; gap:10px; max-height:75dvh; overflow-y:auto;
+  }
+  .sheettitle{font-weight:800; font-size:18px}
+  .sheetgrid{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .sheetgrid button{
+    min-height:52px; border:1.5px solid var(--chip-line); background:var(--chip); color:var(--chip-ink);
+    border-radius:12px; padding:10px 8px; font:700 15px/1.15 "Archivo",sans-serif;
+  }
+  .sheetgrid button:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+  .sheetalt{border:1.5px solid var(--line); background:none; color:var(--muted); border-radius:12px; padding:12px; font:600 13px/1 "Archivo",sans-serif}
+  .sheetalt:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+
+  @media (prefers-reduced-motion:no-preference){
+    .spot,.bench button{transition:outline-color .12s, transform .12s}
+    .spot.sel{transform:translate(-50%,-50%) scale(1.06)}
+  }
+</style>
+
+<header class="bar">
+  <div class="wordmark">The Eagles<span class="u9">U9 · 8v8</span></div>
+  <div class="savestate" id="savestate"></div>
+</header>
+
+<section class="tabpage" id="page-game">
+  <div class="clockstrip">
+    <div class="clockmain">
+      <span class="halftag" id="halftag">Pregame</span>
+      <span class="clock" id="clock">00:00</span>
+      <span class="nextline" id="nextline" hidden=""></span>
+    </div>
+    <div class="clockbtns">
+      <button type="button" id="clockbtn">▶ Kick off</button>
+      <button type="button" id="phasebtn" hidden="">End 1st</button>
+    </div>
+  </div>
+  <div class="scorerow">
+    <button type="button" class="goalbtn us" id="goalus">+1<span>Eagles</span></button>
+    <div class="score"><span id="su">0</span><span class="d">–</span><span id="st">0</span></div>
+    <button type="button" class="goalbtn" id="goalthem">+1<span>Them</span></button>
+  </div>
+  <div class="box" id="saveblock" hidden="">
+    <button type="button" id="copyresultbtn" class="copybtn">📋 Copy result for team chat</button>
+    <input type="text" id="oppname" class="oppinput" placeholder="Opponent name (optional)" maxlength="40">
+    <button type="button" id="savegamebtn" class="savebtn">🏆 Save game to season &amp; reset board</button>
+  </div>
+  <button type="button" id="copylineupbtn" class="copybtn" hidden="">📋 Copy starting lineup</button>
+  <div class="pitchwrap">
+    <div class="pitch" id="pitch">
+      <svg viewBox="0 0 100 134" aria-hidden="true">
+        <g fill="none" stroke="rgba(255,255,255,.85)" stroke-width=".9">
+          <rect x="2.5" y="2.5" width="95" height="129"></rect>
+          <line x1="2.5" y1="67" x2="97.5" y2="67"></line>
+          <circle cx="50" cy="67" r="11"></circle>
+          <rect x="26" y="2.5" width="48" height="16"></rect>
+          <rect x="26" y="115.5" width="48" height="16"></rect>
+          <path d="M39 18.5 A 12 12 0 0 0 61 18.5"></path>
+          <path d="M39 115.5 A 12 12 0 0 1 61 115.5"></path>
+        </g>
+        <g fill="rgba(255,255,255,.85)">
+          <circle cx="50" cy="67" r="1.1"></circle>
+          <circle cx="50" cy="12" r="1.1"></circle>
+          <circle cx="50" cy="122" r="1.1"></circle>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="box">
+    <div class="boxhead benchhead"><h2>Bench</h2></div>
+    <div class="bench" id="bench"></div>
+  </div>
+  <p class="hint" id="hint"></p>
+</section>
+
+<section class="tabpage" id="page-log" hidden="">
+  <div class="scoreline"><span class="lbl">Eagles</span><span id="su2">0</span><span class="d">–</span><span id="st2">0</span><span class="lbl">Them</span></div>
+  <div class="box">
+    <div class="boxhead"><h2>Goals</h2></div>
+    <div class="goallog" id="goallog"></div>
+  </div>
+  <div class="box">
+    <div class="boxhead"><h2 id="minsgoalh">Minutes</h2><span class="legend">● on the field</span></div>
+    <div class="minstable" id="minstable"></div>
+  </div>
+</section>
+
+<section class="tabpage" id="page-season" hidden="">
+  <div class="box">
+    <div class="boxhead"><h2>Record</h2></div>
+    <div class="recordline" id="recordline"></div>
+  </div>
+  <div class="box">
+    <div class="boxhead"><h2>Games</h2></div>
+    <div class="gamelist" id="gamelist"></div>
+  </div>
+  <div class="box">
+    <div class="boxhead"><h2>Player stats</h2></div>
+    <div class="seasontable" id="seasontable"></div>
+  </div>
+  <div class="box">
+    <div class="boxhead"><h2>Positions played</h2></div>
+    <div class="minstable" id="postable"></div>
+  </div>
+</section>
+
+<section class="tabpage" id="page-setup" hidden="">
+  <div class="box">
+    <div class="boxhead"><h2>Game format</h2></div>
+    <div class="formations" id="fmtrow" role="group" aria-label="Game format"></div>
+  </div>
+  <div class="box">
+    <div class="boxhead"><h2>Formation</h2></div>
+    <div class="formations" id="formations" role="group" aria-label="Formation"></div>
+  </div>
+  <div class="box">
+    <div class="injhead"><h2>Injured</h2></div>
+    <p class="setupnote">Select a player on the Game tab, then tap ✚ Injured here to mark them out — or long-press a bench player. Tap a player below to mark them fit.</p>
+    <div class="injured" id="injured"></div>
+  </div>
+  <div class="box">
+    <div class="boxhead abshead"><h2>Out this game</h2></div>
+    <p class="setupnote">Select a player on the Game tab, then tap this header to mark them out. Tap a name below to mark them back in.</p>
+    <div class="absent" id="absentlist"></div>
+  </div>
+  <div class="box">
+    <div class="boxhead"><h2>Game admin</h2></div>
+    <div class="setupactions">
+      <button type="button" id="clearbtn">Clear field (everyone to bench)</button>
+      <button type="button" id="newgamebtn" class="danger">Discard game — clears score &amp; minutes</button>
+    </div>
+  </div>
+</section>
+
+<nav class="tabs" role="tablist" aria-label="Sections">
+  <button type="button" id="tab-game" role="tab" aria-selected="true"><span class="ic">⚽</span>Game</button>
+  <button type="button" id="tab-log" role="tab" aria-selected="false"><span class="ic">📋</span>Log</button>
+  <button type="button" id="tab-season" role="tab" aria-selected="false"><span class="ic">🏆</span>Season</button>
+  <button type="button" id="tab-setup" role="tab" aria-selected="false"><span class="ic">🛠</span>Setup</button>
+</nav>
+
+<div class="sheetback" id="sheetback" hidden="">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle">
+    <div class="sheettitle" id="sheettitle">Who scored?</div>
+    <div class="sheetgrid" id="sheetgrid"></div>
+    <button type="button" class="sheetalt" id="sheetskip">Skip</button>
+  </div>
+</div>
+
+<script type="application/json" id="state">{"v":1,"savedAt":1793449887471,"formation":"2-3-2","field":["p12","p9","p11","p4","p10","p7","p5","p1"],"injured":{},"absent":[],"next":{"opp":"U9 Green Goblins","when":"Sat Oct 31 \u00b7 8:30 AM \u00b7 tournament"},"syncReq":0,"synced":1793447602647,"season":[{"d":"2026-09-12","opp":"U9 Skyfires","us":2,"them":0,"goals":[{"t":"us","half":1,"sec":779,"by":null,"a":null},{"t":"us","half":1,"sec":918,"by":null,"a":null}],"mins":{"p9":3000,"p12":3000,"p6":3000,"p7":3000,"p5":3000,"p11":3000,"p1":3000,"p3":3000},"roles":{"p9":{"GK":3000},"p12":{"DEF":3000},"p6":{"DEF":3000},"p7":{"MID":3000},"p5":{"MID":3000},"p11":{"MID":3000},"p1":{"FWD":3000},"p3":{"FWD":3000}}},{"d":"2026-09-19","opp":"U9 Green Goblins","us":5,"them":2,"goals":[],"mins":{},"roles":{}},{"d":"2026-09-26","opp":"U9 Scorpions","us":3,"them":0,"goals":[{"t":"us","half":1,"sec":480,"by":"p6","a":"p5"}],"mins":{},"roles":{}},{"d":"2026-10-03","opp":"U9 Pink Lightning","us":4,"them":2,"goals":[{"t":"us","half":1,"sec":0,"by":"p5","a":null},{"t":"us","half":1,"sec":0,"by":"p5","a":null},{"t":"us","half":1,"sec":0,"by":"p10","a":null},{"t":"us","half":1,"sec":0,"by":"p1","a":null},{"t":"them","half":1,"sec":0,"by":null,"a":null},{"t":"them","half":1,"sec":0,"by":null,"a":null}],"mins":{},"roles":{}},{"d":"2026-10-10","opp":"U9 Blue Dolphins","us":2,"them":0,"goals":[{"t":"us","half":1,"sec":0,"by":"p5","a":"p10"},{"t":"us","half":1,"sec":0,"by":"p5","a":"p10"}],"mins":{},"roles":{}},{"d":"2026-10-17","opp":"U9 Skyfires","us":2,"them":1,"goals":[{"t":"us","half":1,"sec":0,"by":"p5","a":"p10"},{"t":"us","half":1,"sec":0,"by":"p5","a":null},{"t":"them","half":1,"sec":0,"by":null,"a":null}],"mins":{},"roles":{}},{"d":"2026-10-24","opp":"U9 Scorpions","us":4,"them":0,"goals":[{"t":"us","half":1,"sec":0,"by":"p4","a":"p10"},{"t":"us","half":1,"sec":0,"by":"p10","a":null},{"t":"us","half":1,"sec":0,"by":"p7","a":null},{"t":"us","half":1,"sec":0,"by":"p5","a":null}],"mins":{},"roles":{}}],"game":{"phase":"pre","elapsed":0,"startedAt":0,"running":false,"prev":0,"htAt":0,"goals":[],"minutes":{},"roles":{}},"fmt":"tourney"}</script>
+<script>
+const TEMPLATE = "<!doctype html>\n" + document.documentElement.outerHTML;
+
+const ROSTER = [
+  {id:"p1", name:"Alden", first:"Alden"},
+  {id:"p2", name:"Bjorn", first:"Bjorn"},
+  {id:"p3", name:"Ella", first:"Ella"},
+  {id:"p4", name:"Elliana", first:"Elliana"},
+  {id:"p5", name:"Frankie", first:"Frankie"},
+  {id:"p6", name:"Haven", first:"Haven"},
+  {id:"p7", name:"Jack", first:"Jack"},
+  {id:"p8", name:"Kalila", first:"Kalila"},
+  {id:"p9", name:"Mackenzie", first:"Mackenzie"},
+  {id:"p10", name:"Max", first:"Max"},
+  {id:"p11", name:"Oren", first:"Oren"},
+  {id:"p12", name:"Sabrina", first:"Sabrina"},
+  {id:"p13", name:"Laney", first:"Laney"},
+];
+const BY_ID = Object.fromEntries(ROSTER.map(p=>[p.id,p]));
+
+// Spot 0 is always the keeper (x,y in % of pitch; y grows downward, keeper at bottom).
+const FORMATIONS = {
+  "2-3-2":[{x:50,y:90,r:"GK"},{x:32,y:72,r:"DEF"},{x:68,y:72,r:"DEF"},{x:18,y:48,r:"MID"},{x:50,y:51,r:"MID"},{x:82,y:48,r:"MID"},{x:35,y:24,r:"FWD"},{x:65,y:24,r:"FWD"}],
+  "3-2-2":[{x:50,y:90,r:"GK"},{x:23,y:70,r:"DEF"},{x:50,y:74,r:"DEF"},{x:77,y:70,r:"DEF"},{x:33,y:47,r:"MID"},{x:67,y:47,r:"MID"},{x:35,y:23,r:"FWD"},{x:65,y:23,r:"FWD"}],
+  "3-3-1":[{x:50,y:90,r:"GK"},{x:23,y:70,r:"DEF"},{x:50,y:74,r:"DEF"},{x:77,y:70,r:"DEF"},{x:18,y:46,r:"MID"},{x:50,y:50,r:"MID"},{x:82,y:46,r:"MID"},{x:50,y:22,r:"FWD"}],
+  "2-4-1":[{x:50,y:90,r:"GK"},{x:35,y:73,r:"DEF"},{x:65,y:73,r:"DEF"},{x:13,y:47,r:"MID"},{x:38,y:51,r:"MID"},{x:62,y:51,r:"MID"},{x:87,y:47,r:"MID"},{x:50,y:22,r:"FWD"}],
+};
+
+const GAME_DEFAULT = {phase:"pre", elapsed:0, startedAt:0, running:false, prev:0, htAt:0, goals:[], minutes:{}, roles:{}};
+const DEFAULT_STATE = {v:1, savedAt:0, formation:"2-3-2",
+  field:["p1","p2","p3","p4","p5","p6","p7","p8"], injured:{}};
+
+const LS_KEY = "eagles-lineup-v1";
+function validState(s){
+  return s && s.v===1 && FORMATIONS[s.formation] && Array.isArray(s.field)
+    && s.field.length===8 && s.field.every(id=>id===null || BY_ID[id])
+    && new Set(s.field.filter(Boolean)).size === s.field.filter(Boolean).length;
+}
+function sanitizeGoals(arr){
+  return Array.isArray(arr) ? arr
+    .filter(x=>x && (x.t==="us"||x.t==="them"))
+    .map(x=>({
+      t:x.t, half:x.half===2?2:1,
+      sec:(typeof x.sec==="number"&&x.sec>=0)?x.sec:0,
+      by:(x.t==="us"&&BY_ID[x.by])?x.by:null,
+      a:(x.t==="us"&&BY_ID[x.a]&&x.a!==x.by)?x.a:null
+    })) : [];
+}
+function sanitizeMins(obj){
+  return (obj && typeof obj==="object" && !Array.isArray(obj))
+    ? Object.fromEntries(Object.entries(obj).filter(([k,v])=>BY_ID[k]&&typeof v==="number"&&v>=0)) : {};
+}
+const ROLES = ["GK","DEF","MID","FWD"];
+function sanitizeRoles(obj){
+  const out = {};
+  if(obj && typeof obj==="object" && !Array.isArray(obj)){
+    for(const [k,v] of Object.entries(obj)){
+      if(!BY_ID[k] || !v || typeof v!=="object" || Array.isArray(v)) continue;
+      const r = {};
+      for(const q of ROLES){ if(typeof v[q]==="number" && v[q]>=0) r[q]=v[q]; }
+      if(Object.keys(r).length) out[k]=r;
+    }
+  }
+  return out;
+}
+function normalize(s, fb){
+  const raw = (s.injured && typeof s.injured==="object" && !Array.isArray(s.injured))
+    ? s.injured : ((fb && fb.injured) || {});
+  s.injured = {};
+  for(const id of Object.keys(raw)){
+    if(BY_ID[id]) s.injured[id] = typeof raw[id]==="string" ? raw[id] : "Out";
+  }
+  s.field = s.field.map(id => (id && s.injured[id]!==undefined) ? null : id);
+  const abRaw = Array.isArray(s.absent) ? s.absent : ((fb && Array.isArray(fb.absent)) ? fb.absent : []);
+  s.absent = [...new Set(abRaw.filter(id => BY_ID[id] && s.injured[id]===undefined))];
+  s.field = s.field.map(id => (id && s.absent.includes(id)) ? null : id);
+  const nx = (s.next && typeof s.next==="object" && !Array.isArray(s.next)) ? s.next : ((fb && fb.next) || {});
+  s.next = {
+    opp: typeof nx.opp==="string" ? nx.opp.slice(0,40) : "",
+    when: typeof nx.when==="string" ? nx.when.slice(0,60) : ""
+  };
+  s.syncReq = (typeof s.syncReq==="number" && s.syncReq>=0) ? s.syncReq : ((fb && typeof fb.syncReq==="number") ? fb.syncReq : 0);
+  s.synced = (typeof s.synced==="number" && s.synced>=0) ? s.synced : ((fb && typeof fb.synced==="number") ? fb.synced : 0);
+  delete s.plan;
+  delete s.ratings;
+  s.fmt = (s.fmt==="tourney" || (s.fmt===undefined && fb && fb.fmt==="tourney")) ? "tourney" : "league";
+  const g = (s.game && typeof s.game==="object") ? s.game : ((fb && fb.game) || {});
+  s.game = {
+    phase: ["pre","h1","ht","h2","ft"].includes(g.phase) ? g.phase : "pre",
+    elapsed: (typeof g.elapsed==="number" && g.elapsed>=0) ? g.elapsed : 0,
+    startedAt: (typeof g.startedAt==="number") ? g.startedAt : 0,
+    running: g.running===true,
+    prev: (typeof g.prev==="number" && g.prev>=0) ? g.prev : 0,
+    htAt: (typeof g.htAt==="number") ? g.htAt : 0,
+    goals: sanitizeGoals(g.goals),
+    minutes: sanitizeMins(g.minutes),
+    roles: sanitizeRoles(g.roles)
+  };
+  // A clock left running for hours is a forgotten one — stop it without the phantom time.
+  if(s.game.running && Date.now()-s.game.startedAt > 2*3600*1000) s.game.running = false;
+  const snRaw = Array.isArray(s.season) ? s.season : ((fb && Array.isArray(fb.season)) ? fb.season : []);
+  s.season = snRaw.filter(e=>e && typeof e==="object").map(e=>({
+    d: typeof e.d==="string" ? e.d.slice(0,10) : "",
+    opp: typeof e.opp==="string" ? e.opp.slice(0,40) : "",
+    us: (typeof e.us==="number"&&e.us>=0) ? Math.floor(e.us) : 0,
+    them: (typeof e.them==="number"&&e.them>=0) ? Math.floor(e.them) : 0,
+    goals: sanitizeGoals(e.goals),
+    mins: sanitizeMins(e.mins),
+    roles: sanitizeRoles(e.roles)
+  }));
+  return s;
+}
+function loadState(){
+  let emb=null, loc=null;
+  try{ emb = JSON.parse(document.getElementById("state").textContent); }catch(e){}
+  try{ loc = JSON.parse(localStorage.getItem(LS_KEY)); }catch(e){}
+  if(!validState(emb)) emb=null;
+  if(!validState(loc)) loc=null;
+  if(emb && loc){
+    // Prefer the newer save; the older state fills in fields the newer one predates.
+    const newer = (loc.savedAt||0) > (emb.savedAt||0) ? loc : emb;
+    const older = newer===loc ? emb : loc;
+    return normalize(newer, older);
+  }
+  const s = emb || loc || structuredClone(DEFAULT_STATE);
+  return normalize(s);
+}
+
+let state = loadState();
+let sel = null;            // {kind:"spot", i} | {kind:"bench", id}
+let oppPrefilled = false;  // next-game opponent auto-filled into the save card once per full time
+let sheet = null;          // {goalIdx, step:"scorer"|"assist"}
+let confirmReset = false, confirmTimer = null;
+let artifactNS = null;
+let canPublish = false;
+let publishTimer = null;
+let dirty = false;
+
+const $ = id => document.getElementById(id);
+const pitchEl=$("pitch"), benchEl=$("bench"), injEl=$("injured"), formEl=$("formations");
+const saveEl=$("savestate"), hintEl=$("hint"), clockEl=$("clock");
+
+// --- game clock & minutes ---
+function gFlush(){
+  const g = state.game;
+  if(!g.running) return;
+  const now = Date.now();
+  const d = Math.max(0,(now-g.startedAt)/1000);
+  g.elapsed += d;
+  const pos = FORMATIONS[state.formation];
+  state.field.forEach((id,i)=>{
+    if(!id) return;
+    g.minutes[id]=(g.minutes[id]||0)+d;
+    const rr = g.roles[id] || (g.roles[id]={});
+    rr[pos[i].r] = (rr[pos[i].r]||0)+d;
+  });
+  g.startedAt = now;
+}
+function clockSecs(){ const g=state.game; return g.elapsed + (g.running ? Math.max(0,(Date.now()-g.startedAt)/1000) : 0); }
+function playerSecs(id){ const g=state.game; return (g.minutes[id]||0) + (g.running && state.field.includes(id) ? Math.max(0,(Date.now()-g.startedAt)/1000) : 0); }
+// Day total: this game plus every game already saved with today's date —
+// the number that says who needs catching up later in a tournament day.
+function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function daySecs(id){
+  let t = playerSecs(id);
+  for(const e of state.season){ if(e.d===todayStr()) t += (e.mins[id]||0); }
+  return t;
+}
+const HALF_LEN = 25*60;   // the Eagles play two 25-minute halves
+const HT_LEN = 5*60;      // 5-minute halftime break
+function fmtClock(s){ s=Math.floor(s); return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0"); }
+function clockOver(){ const p=state.game.phase; return (p==="h1"||p==="h2") && clockSecs()>=HALF_LEN; }
+function fmtMin(s){ return Math.floor(s/60)+"m"; }
+function totalSecs(){ return (state.game.prev||0) + clockSecs(); }  // whole-game time across halves
+function isLow(id){
+  const t = totalSecs();
+  return t>=6*60 && state.injured[id]===undefined && playerSecs(id) < t/2;
+}
+// League: two 25-minute halves, everyone plays 25. Tournament: one 25-minute
+// game, so the fair-share goal is half the game.
+function tourney(){ return state.fmt==="tourney"; }
+function gameLen(){ return tourney() ? HALF_LEN : 2*HALF_LEN; }
+function target(){ return tourney() ? HALF_LEN/2 : HALF_LEN; }
+function remainingSecs(){ return Math.max(0, gameLen() - totalSecs()); }
+// met: the fair-share goal (halved while the 1st of two halves runs). risk:
+// minutes still needed >= minutes left — must play from now on. low: behind pace.
+function minsState(id){
+  if(state.injured[id]!==undefined || state.absent.includes(id) || state.game.phase==="pre") return "";
+  const metTarget = (!tourney() && (state.game.phase==="h1"||state.game.phase==="ht")) ? target()/2 : target();
+  if(playerSecs(id) >= metTarget) return "met";
+  if(target() - playerSecs(id) >= remainingSecs()) return "risk";
+  if(isLow(id)) return "low";
+  return "";
+}
+function applyMins(el){
+  const id = el.dataset.pid, st = minsState(id);
+  // field pucks show the bare number, big; bench and log keep the "m" suffix
+  el.textContent = el.classList.contains("mins")
+    ? String(Math.floor(playerSecs(id)/60))
+    : (tourney() && el.classList.contains("mv")
+        ? fmtMin(playerSecs(id)) + " · " + fmtMin(daySecs(id)) + " today"
+        : fmtMin(playerSecs(id)));
+  for(const c of ["low","risk","met"]) el.classList.toggle(c, st===c);
+  const btn = el.parentElement;
+  if(!btn) return;
+  if(el.classList.contains("mins-inline")){
+    btn.classList.toggle("low", st==="low");
+    btn.classList.toggle("risk", st==="risk");
+    btn.classList.toggle("met", st==="met");
+  }else if(el.classList.contains("mins")){
+    btn.classList.toggle("lowfield", st==="low");
+    btn.classList.toggle("riskfield", st==="risk");
+    btn.classList.toggle("metfield", st==="met");
+  }
+}
+function tickClock(){
+  const g = state.game;
+  if(g.phase==="ht"){
+    const rem = HT_LEN - (Date.now()-(g.htAt||Date.now()))/1000;
+    clockEl.textContent = rem>=0 ? fmtClock(rem) : "+"+fmtClock(-rem);
+    clockEl.classList.add("ht");
+    clockEl.classList.toggle("over", rem<0);
+  }else{
+    clockEl.classList.remove("ht");
+    clockEl.textContent = fmtClock(clockSecs());
+    clockEl.classList.toggle("over", clockOver());
+  }
+}
+function curHalf(){ return (state.game.phase==="h2"||state.game.phase==="ft") ? 2 : 1; }
+
+function benchIds(){
+  const onField = new Set(state.field.filter(Boolean));
+  return ROSTER.filter(p=>!onField.has(p.id) && state.injured[p.id]===undefined && !state.absent.includes(p.id)).map(p=>p.id);
+}
+
+// --- tabs ---
+const TABS = ["game","log","season","setup"];
+let tab = "game";
+function switchTab(t){
+  tab = t;
+  try{ sessionStorage.setItem("eagles-tab", t); }catch(e){}
+  for(const n of TABS){
+    $("page-"+n).hidden = (n!==t);
+    $("tab-"+n).setAttribute("aria-selected", String(n===t));
+  }
+}
+for(const n of TABS) $("tab-"+n).addEventListener("click", ()=>switchTab(n));
+
+// --- render ---
+function render(){
+  renderGame();
+  renderPitchBench();
+  renderLog();
+  renderSeason();
+  renderSetup();
+}
+
+function renderGame(){
+  const g = state.game;
+  const us = g.goals.filter(x=>x.t==="us").length;
+  const them = g.goals.filter(x=>x.t==="them").length;
+  $("su").textContent = us;  $("st").textContent = them;
+  $("su2").textContent = us; $("st2").textContent = them;
+  const tags = {pre:"Pregame", h1: tourney() ? "Game" : "1st half", ht:"Halftime", h2:"2nd half", ft:"Full time"};
+  $("halftag").textContent = tags[g.phase]
+    + ((g.phase==="h1"||g.phase==="h2") ? " · 25 min" : (g.phase==="ht" ? " · 5 min break" : ""));
+  tickClock();
+  const cb = $("clockbtn"), pb = $("phasebtn");
+  cb.hidden = (g.phase==="ft");
+  cb.classList.toggle("live", g.running);
+  if(g.phase==="pre") cb.textContent = "▶ Kick off";
+  else if(g.phase==="ht") cb.textContent = "▶ Start 2nd half";
+  else if(g.phase!=="ft") cb.textContent = g.running ? "⏸ Pause" : "▶ Resume";
+  pb.hidden = !(g.phase==="h1"||g.phase==="h2");
+  if(g.phase==="h1") pb.textContent = tourney() ? "Full time" : "End 1st";
+  else if(g.phase==="h2") pb.textContent = "Full time";
+  $("saveblock").hidden = (g.phase!=="ft");
+  $("copylineupbtn").hidden = (g.phase!=="pre");
+  const nl = $("nextline");
+  const nextTxt = [state.next.opp ? "vs "+state.next.opp : "", state.next.when].filter(Boolean).join(" · ");
+  nl.hidden = !(g.phase==="pre" && nextTxt);
+  nl.textContent = nextTxt ? "Next: "+nextTxt : "";
+  if(g.phase!=="ft"){ oppPrefilled = false; }
+  else if(!oppPrefilled && state.next.opp && !$("oppname").value){
+    $("oppname").value = state.next.opp;
+    oppPrefilled = true;
+  }
+}
+
+function renderPitchBench(){
+  pitchEl.querySelectorAll(".spot").forEach(n=>n.remove());
+  FORMATIONS[state.formation].forEach((pos,i)=>{
+    const id = state.field[i];
+    const b = document.createElement("button");
+    b.type="button";
+    b.className = "spot " + (id ? "filled"+(i===0?" gk":"") : "empty");
+    b.style.left = pos.x+"%"; b.style.top = pos.y+"%";
+    if(id){
+      b.textContent = BY_ID[id].first;
+      if(BY_ID[id].first.length>=8) b.classList.add("longname");
+      if(state.game.phase!=="pre"){
+        const m = document.createElement("span");
+        m.className="mins"; m.dataset.pid=id;
+        b.appendChild(m);
+        applyMins(m);
+      }
+      b.setAttribute("aria-label", BY_ID[id].name + " at " + pos.r);
+    }else{
+      b.textContent = pos.r;
+      b.setAttribute("aria-label", "Empty " + pos.r + " spot");
+    }
+    if(sel && sel.kind==="spot" && sel.i===i) b.classList.add("sel");
+    b.addEventListener("click", ()=>tapSpot(i));
+    pitchEl.appendChild(b);
+  });
+  benchEl.innerHTML = "";
+  for(const id of benchIds()){
+    const b = document.createElement("button");
+    b.type="button"; b.textContent = BY_ID[id].first;
+    if(state.game.phase!=="pre"){
+      const m = document.createElement("span");
+      m.className="mins-inline"; m.dataset.pid=id;
+      b.appendChild(m);
+      applyMins(m);
+    }
+    const st = minsState(id);
+    b.setAttribute("aria-label", BY_ID[id].name + ", on the bench"
+      + (st==="risk" ? ", must play the rest to reach "+Math.round(target()/60)+" minutes" : st==="low" ? ", under half the game time" : ""));
+    if(sel && sel.kind==="bench" && sel.id===id) b.classList.add("sel");
+    b.addEventListener("click", ()=>tapBench(id));
+    benchEl.appendChild(b);
+  }
+  hintEl.textContent = sel
+    ? (sel.kind==="bench"
+        ? "Tap a spot to put " + BY_ID[sel.id].first + " on."
+        : (state.field[sel.i]
+            ? "Tap a spot to swap, a bench player to sub, or the Bench header to take " + BY_ID[state.field[sel.i]].first + " off."
+            : "Tap a bench player to fill this spot."))
+    : "Tap a player, then a spot. Tap two spots to swap.";
+}
+
+function renderLog(){
+  const g = state.game;
+  $("minsgoalh").textContent = "Minutes · goal " + Math.round(target()/60) + "m each";
+  const log = $("goallog");
+  log.innerHTML = "";
+  g.goals.forEach((goal, idx)=>{
+    const row = document.createElement("div"); row.className="goalrow";
+    const when = document.createElement("span"); when.className="when";
+    when.textContent = "H"+goal.half+" "+String(Math.floor(goal.sec/60)+1).padStart(2,"0")+"′";
+    const who = document.createElement("span"); who.className="who";
+    if(goal.t==="them"){ who.textContent = "Them"; }
+    else{
+      who.textContent = "⚽ " + (goal.by ? BY_ID[goal.by].first : "Eagles");
+      if(goal.a){
+        const as = document.createElement("span"); as.className="as";
+        as.textContent = " · assist " + BY_ID[goal.a].first;
+        who.appendChild(as);
+      }
+    }
+    row.append(when, who);
+    if(goal.t==="us"){
+      const ed = document.createElement("button"); ed.type="button"; ed.textContent="✎";
+      ed.setAttribute("aria-label","Edit scorer and assist");
+      ed.addEventListener("click", ()=>openSheet(idx,"scorer"));
+      row.appendChild(ed);
+    }
+    const del = document.createElement("button"); del.type="button"; del.textContent="✕";
+    del.setAttribute("aria-label","Remove this goal");
+    del.addEventListener("click", ()=>{
+      g.goals.splice(idx,1);
+      if(sheet && sheet.goalIdx===idx) closeSheet();
+      commit();
+    });
+    row.appendChild(del);
+    log.appendChild(row);
+  });
+  const mt = $("minstable");
+  mt.innerHTML = "";
+  const sorted = tourney()
+    ? [...ROSTER].sort((a,b)=>daySecs(b.id)-daySecs(a.id))
+    : [...ROSTER].sort((a,b)=>playerSecs(b.id)-playerSecs(a.id));
+  for(const p of sorted){
+    const row = document.createElement("div"); row.className="minrow";
+    const mn = document.createElement("span"); mn.className="mn"; mn.textContent = p.first;
+    if(state.field.includes(p.id)) mn.classList.add("on");
+    if(state.injured[p.id]!==undefined){
+      const inj = document.createElement("span"); inj.className="inj"; inj.textContent="✚";
+      mn.appendChild(inj);
+    }
+    const mv = document.createElement("span"); mv.className="mv"; mv.dataset.pid=p.id;
+    row.append(mn, mv);
+    mt.appendChild(row);
+    applyMins(mv);
+  }
+}
+
+let openGame=null, confirmDelGame=null, delGameTimer=null;
+function fmtDate(d){
+  const mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const p=(d||"").split("-");
+  return p.length===3 ? mo[(+p[1]||1)-1]+" "+(+p[2]) : (d||"—");
+}
+function renderSeason(){
+  const sn = state.season;
+  let w=0,l=0,dr=0,gf=0,ga=0;
+  sn.forEach(e=>{ gf+=e.us; ga+=e.them; if(e.us>e.them)w++; else if(e.us<e.them)l++; else dr++; });
+  $("recordline").textContent = sn.length
+    ? w+"W · "+l+"L · "+dr+"D — goals: "+gf+" for, "+ga+" against"
+    : "No games saved yet. Finish a game, then tap Save to season in Setup.";
+  const gl = $("gamelist");
+  gl.innerHTML = "";
+  sn.forEach((e, idx)=>{
+    const row = document.createElement("div"); row.className="gamerow";
+    const top = document.createElement("div"); top.className="gtop";
+    const head = document.createElement("button"); head.type="button"; head.className="ghead";
+    const res = e.us>e.them ? "W" : e.us<e.them ? "L" : "D";
+    const info = document.createElement("span"); info.className="ginfo";
+    info.textContent = fmtDate(e.d) + (e.opp ? " · vs "+e.opp : "");
+    const chip = document.createElement("span"); chip.className="gres "+res.toLowerCase();
+    chip.textContent = res+" "+e.us+"–"+e.them;
+    head.append(info, chip);
+    head.setAttribute("aria-label","Game "+info.textContent+", "+chip.textContent+". Tap for goal details.");
+    head.addEventListener("click", ()=>{ openGame = openGame===idx ? null : idx; renderSeason(); });
+    const del = document.createElement("button"); del.type="button"; del.className="gdel";
+    del.textContent = confirmDelGame===idx ? "Sure?" : "✕";
+    del.setAttribute("aria-label","Delete this game from the season");
+    del.addEventListener("click", ()=>{
+      if(confirmDelGame===idx){
+        confirmDelGame=null;
+        sn.splice(idx,1);
+        if(openGame===idx) openGame=null; else if(openGame!==null && openGame>idx) openGame--;
+        commit();
+      }else{
+        confirmDelGame=idx; renderSeason();
+        clearTimeout(delGameTimer);
+        delGameTimer=setTimeout(()=>{ confirmDelGame=null; renderSeason(); }, 3500);
+      }
+    });
+    top.append(head, del);
+    row.appendChild(top);
+    if(openGame===idx){
+      const det = document.createElement("div"); det.className="gdetail";
+      if(!e.goals.length){ det.textContent = "No goals."; }
+      e.goals.forEach(x=>{
+        const li = document.createElement("div");
+        li.textContent = "H"+x.half+" "+String(Math.floor(x.sec/60)+1).padStart(2,"0")+"′ · "
+          + (x.t==="them" ? "Them" : "⚽ "+(x.by?BY_ID[x.by].first:"Eagles")+(x.a?" · A "+BY_ID[x.a].first:""));
+        det.appendChild(li);
+      });
+      row.appendChild(det);
+    }
+    gl.appendChild(row);
+  });
+  const st = $("seasontable");
+  st.innerHTML = "";
+  const head = document.createElement("div"); head.className="srow shead";
+  for(const t of ["Player","GP","⚽","🅰","Min","Avg"]){
+    const c=document.createElement("span"); c.textContent=t; head.appendChild(c);
+  }
+  st.appendChild(head);
+  const stats = ROSTER.map(p=>{
+    let gp=0, goals=0, ass=0, min=0;
+    sn.forEach(e=>{
+      const m = e.mins[p.id]||0;
+      if(m>0){ gp++; min+=m; }
+      e.goals.forEach(x=>{ if(x.by===p.id) goals++; if(x.a===p.id) ass++; });
+    });
+    return {p, gp, goals, ass, min};
+  }).sort((a,b)=> b.goals-a.goals || b.ass-a.ass || b.min-a.min || a.p.first.localeCompare(b.p.first));
+  for(const s2 of stats){
+    const r = document.createElement("div"); r.className="srow";
+    const vals = [s2.p.first, s2.gp, s2.goals, s2.ass,
+      Math.round(s2.min/60)+"m", s2.gp ? Math.round(s2.min/60/s2.gp)+"m" : "—"];
+    for(const v of vals){ const c=document.createElement("span"); c.textContent=v; r.appendChild(c); }
+    st.appendChild(r);
+  }
+  // positions played: each kid's role mix across saved games
+  const pt = $("postable");
+  pt.innerHTML = "";
+  const label = {GK:"GK", DEF:"Def", MID:"Mid", FWD:"Fwd"};
+  let anyRoles = false;
+  for(const p of ROSTER){
+    const tot = {GK:0, DEF:0, MID:0, FWD:0};
+    sn.forEach(e=>{ const rr=e.roles[p.id]; if(rr) for(const q of ROLES) tot[q]+=(rr[q]||0); });
+    const sum = ROLES.reduce((a,q)=>a+tot[q],0);
+    if(sum<30) continue;
+    anyRoles = true;
+    const row = document.createElement("div"); row.className="minrow";
+    const mn = document.createElement("span"); mn.className="mn"; mn.textContent = p.first;
+    const mix = document.createElement("span"); mix.className="mix";
+    mix.textContent = ROLES.filter(q=>tot[q]/sum>=0.005)
+      .map(q=>label[q]+" "+Math.round(100*tot[q]/sum)+"%").join(" · ");
+    row.append(mn, mix);
+    pt.appendChild(row);
+  }
+  if(!anyRoles){
+    const d = document.createElement("div");
+    d.style.cssText = "font-size:12px;color:var(--muted)";
+    d.textContent = "Position minutes appear here after your first saved game.";
+    pt.appendChild(d);
+  }
+}
+
+function renderSetup(){
+  const fr = $("fmtrow");
+  fr.innerHTML = "";
+  for(const [val,lab] of [["league","League 2×25"],["tourney","Tourney 1×25"]]){
+    const b = document.createElement("button");
+    b.type="button"; b.textContent=lab;
+    b.setAttribute("aria-pressed", String(state.fmt===val));
+    b.addEventListener("click", ()=>{ if(state.fmt!==val){ gFlush(); state.fmt=val; sel=null; commit(); } });
+    fr.appendChild(b);
+  }
+  formEl.innerHTML = "";
+  for(const f of Object.keys(FORMATIONS)){
+    const b = document.createElement("button");
+    b.type="button"; b.textContent=f;
+    b.setAttribute("aria-pressed", String(f===state.formation));
+    b.addEventListener("click", ()=>{ if(f!==state.formation){ gFlush(); state.formation=f; sel=null; commit(); } });
+    formEl.appendChild(b);
+  }
+  injEl.innerHTML = "";
+  for(const p of ROSTER){
+    if(state.injured[p.id]===undefined) continue;
+    const note = state.injured[p.id] || "Out";
+    const b = document.createElement("button");
+    b.type="button";
+    b.innerHTML = '<span class="nm"></span><span class="note"></span>';
+    b.querySelector(".nm").textContent = p.first;
+    b.querySelector(".note").textContent = note;
+    b.setAttribute("aria-label", p.name + ", injured — " + note + ". Tap to mark fit.");
+    b.addEventListener("click", ()=>{ delete state.injured[p.id]; sel=null; commit(); });
+    injEl.appendChild(b);
+  }
+  const ab = $("absentlist");
+  ab.innerHTML = "";
+  for(const p of ROSTER){
+    if(!state.absent.includes(p.id)) continue;
+    const b = document.createElement("button");
+    b.type="button"; b.textContent = p.first;
+    b.setAttribute("aria-label", p.name + ", out this game. Tap to mark available.");
+    b.addEventListener("click", ()=>{
+      state.absent = state.absent.filter(x=>x!==p.id);
+      sel=null; commit();
+    });
+    ab.appendChild(b);
+  }
+  $("newgamebtn").textContent = confirmReset ? "Tap again to confirm discard" : "Discard game — clears score & minutes";
+}
+
+// --- lineup interactions ---
+function tapSpot(i){
+  if(sel && sel.kind==="spot"){
+    if(sel.i===i){ sel=null; render(); return; }
+    gFlush();   // positions change on a swap — settle role minutes first
+    const t = state.field[i];
+    state.field[i] = state.field[sel.i];
+    state.field[sel.i] = t;
+    sel=null; commit(); return;
+  }
+  if(sel && sel.kind==="bench"){
+    gFlush();
+    state.field[i] = sel.id;   // occupant (if any) simply returns to bench
+    sel=null; commit(); return;
+  }
+  sel = {kind:"spot", i}; render();
+}
+function tapBench(id){
+  if(longPressed){ longPressed=false; return; }   // this tap was a long-press, already handled
+  if(state.injured[id]!==undefined) return;       // stale tap on a player just marked injured
+  if(sel && sel.kind==="spot"){
+    gFlush();
+    state.field[sel.i] = id;   // sub: bench player in, occupant back to bench
+    sel=null; commit(); return;
+  }
+  sel = (sel && sel.kind==="bench" && sel.id===id) ? null : {kind:"bench", id};
+  render();
+}
+// Tapping the bench header while a filled spot is selected sends that player off.
+document.querySelector(".benchhead").addEventListener("click", ()=>{
+  if(sel && sel.kind==="spot" && state.field[sel.i]){
+    gFlush();
+    state.field[sel.i] = null; sel=null; commit();
+  }
+});
+// Selected player + tap the ✚ Injured header in Setup = mark them out.
+document.querySelector(".injhead").addEventListener("click", ()=>{
+  let id = null;
+  if(sel && sel.kind==="spot" && state.field[sel.i]){ gFlush(); id = state.field[sel.i]; state.field[sel.i] = null; }
+  else if(sel && sel.kind==="bench"){ id = sel.id; }
+  if(id){ state.injured[id] = state.injured[id] || "Out"; sel=null; commit(); }
+});
+// Selected player + tap the "Out this game" header in Setup = mark them absent.
+document.querySelector(".abshead").addEventListener("click", ()=>{
+  let id = null;
+  if(sel && sel.kind==="spot" && state.field[sel.i]){ gFlush(); id = state.field[sel.i]; state.field[sel.i] = null; }
+  else if(sel && sel.kind==="bench"){ id = sel.id; }
+  if(id && !state.absent.includes(id)){ state.absent.push(id); sel=null; commit(); }
+});
+// Long-press a bench player to mark them injured (tap the injured list in Setup to mark fit).
+let pressTimer=null, longPressed=false;
+benchEl.addEventListener("pointerdown", (e)=>{
+  const btn = e.target.closest("button");
+  if(!btn) return;
+  longPressed = false;
+  const name = btn.firstChild && btn.firstChild.textContent;
+  const p = ROSTER.find(x=>x.first===name);
+  if(!p) return;
+  pressTimer = setTimeout(()=>{
+    longPressed = true;
+    state.injured[p.id] = state.injured[p.id] || "Out";
+    sel=null; commit();
+  }, 650);
+});
+["pointerup","pointercancel","pointerleave"].forEach(ev=>benchEl.addEventListener(ev, ()=>clearTimeout(pressTimer)));
+
+$("clearbtn").addEventListener("click", ()=>{
+  gFlush();
+  state.field = [null,null,null,null,null,null,null,null];
+  sel=null; commit();
+});
+$("savegamebtn").addEventListener("click", ()=>{
+  const g = state.game;
+  if(g.phase!=="ft") return;
+  const dt = new Date();
+  state.season.push({
+    d: dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0"),
+    opp: ($("oppname").value||"").trim().slice(0,40),
+    us: g.goals.filter(x=>x.t==="us").length,
+    them: g.goals.filter(x=>x.t==="them").length,
+    goals: g.goals.map(x=>({t:x.t, half:x.half, sec:x.sec, by:x.by, a:x.a})),
+    mins: Object.fromEntries(ROSTER.map(p=>[p.id, Math.round(playerSecs(p.id))]).filter(([,v])=>v>0)),
+    roles: sanitizeRoles(g.roles)
+  });
+  state.game = structuredClone(GAME_DEFAULT);
+  if(!tourney()) state.absent = [];
+  state.next = {opp:"", when:""};
+  $("oppname").value = "";
+  openGame = null;
+  sel=null; closeSheet(); commit();
+  switchTab("season");
+});
+// --- copy-to-clipboard for the team chat ---
+function copyText(txt, btn){
+  const orig = btn.textContent;
+  const done = ()=>{ btn.textContent = "Copied ✓"; setTimeout(()=>{ btn.textContent = orig; }, 2000); };
+  const fallback = ()=>{
+    const ta = document.createElement("textarea");
+    ta.value = txt; ta.setAttribute("readonly","");
+    ta.style.cssText = "position:fixed;left:-9999px";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); done(); }catch(e){}
+    ta.remove();
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done).catch(fallback);
+  }else fallback();
+}
+function lineupText(){
+  const pos = FORMATIONS[state.formation];
+  const groups = {GK:[], DEF:[], MID:[], FWD:[]};
+  state.field.forEach((id,i)=>{ if(id) groups[pos[i].r].push(BY_ID[id].first); });
+  const lines = ["🦅 Eagles starting 8 ("+state.formation+")"];
+  for(const [q,names] of Object.entries(groups)){
+    if(names.length) lines.push(q+": "+names.join(", "));
+  }
+  const bench = benchIds().map(id=>BY_ID[id].first);
+  if(bench.length) lines.push("Bench: "+bench.join(", "));
+  return lines.join("\n");
+}
+function resultText(){
+  const g = state.game;
+  const us = g.goals.filter(x=>x.t==="us").length;
+  const them = g.goals.filter(x=>x.t==="them").length;
+  const opp = ($("oppname").value||"").trim();
+  const lines = ["🦅 Eagles "+us+" – "+them+(opp ? " "+opp : "")+" (final)"];
+  const scorers = {}, assists = {};
+  g.goals.forEach(x=>{
+    if(x.by) scorers[x.by]=(scorers[x.by]||0)+1;
+    if(x.a) assists[x.a]=(assists[x.a]||0)+1;
+  });
+  const fmt = m => Object.entries(m).sort((a,b)=>b[1]-a[1])
+    .map(([id,n])=>BY_ID[id].first+(n>1?" ×"+n:"")).join(", ");
+  if(Object.keys(scorers).length) lines.push("⚽ "+fmt(scorers));
+  if(Object.keys(assists).length) lines.push("🅰 "+fmt(assists));
+  const played = ROSTER.filter(p=>state.injured[p.id]===undefined && playerSecs(p.id)>0);
+  if(played.length && played.every(p=>playerSecs(p.id)>=target()))
+    lines.push("💪 Every Eagle played "+Math.round(target()/60)+"+ minutes");
+  return lines.join("\n");
+}
+$("copylineupbtn").addEventListener("click", ()=>copyText(lineupText(), $("copylineupbtn")));
+$("copyresultbtn").addEventListener("click", ()=>copyText(resultText(), $("copyresultbtn")));
+
+$("newgamebtn").addEventListener("click", ()=>{
+  if(!confirmReset){
+    confirmReset=true; renderSetup();
+    clearTimeout(confirmTimer);
+    confirmTimer=setTimeout(()=>{ confirmReset=false; renderSetup(); }, 4000);
+    return;
+  }
+  confirmReset=false;
+  state.game = structuredClone(GAME_DEFAULT);
+  if(!tourney()) state.absent = [];
+  closeSheet(); sel=null; commit();
+});
+
+// --- game controls ---
+$("clockbtn").addEventListener("click", ()=>{
+  const g = state.game;
+  if(g.phase==="pre"){ g.phase="h1"; g.running=true; g.startedAt=Date.now(); }
+  else if(g.phase==="ht"){ g.prev=(g.prev||0)+g.elapsed; g.phase="h2"; g.elapsed=0; g.htAt=0; g.running=true; g.startedAt=Date.now(); }
+  else if(g.phase==="h1"||g.phase==="h2"){
+    if(g.running){ gFlush(); g.running=false; }
+    else { g.running=true; g.startedAt=Date.now(); }
+  }
+  else return;
+  commit();
+});
+$("phasebtn").addEventListener("click", ()=>{
+  const g = state.game;
+  if(g.phase==="h1"){
+    gFlush(); g.running=false;
+    if(tourney()){ g.phase="ft"; } else { g.phase="ht"; g.htAt=Date.now(); }
+    commit();
+  }
+  else if(g.phase==="h2"){ gFlush(); g.running=false; g.phase="ft"; commit(); }
+});
+$("goalus").addEventListener("click", ()=>{
+  gFlush();
+  state.game.goals.push({t:"us", half:curHalf(), sec:Math.floor(clockSecs()), by:null, a:null});
+  commit();
+  openSheet(state.game.goals.length-1, "scorer");
+});
+$("goalthem").addEventListener("click", ()=>{
+  gFlush();
+  state.game.goals.push({t:"them", half:curHalf(), sec:Math.floor(clockSecs()), by:null, a:null});
+  commit();
+});
+
+// --- goal sheet (scorer → assist) ---
+function openSheet(goalIdx, step){
+  sheet = {goalIdx, step};
+  renderSheet();
+}
+function closeSheet(){
+  sheet = null;
+  $("sheetback").hidden = true;
+}
+function renderSheet(){
+  if(!sheet) return;
+  const goal = state.game.goals[sheet.goalIdx];
+  if(!goal){ closeSheet(); return; }
+  $("sheetback").hidden = false;
+  const scorerStep = sheet.step==="scorer";
+  $("sheettitle").textContent = scorerStep ? "⚽ Who scored?" : "Assist?";
+  $("sheetskip").textContent = scorerStep ? "Skip — not sure" : "No assist";
+  const grid = $("sheetgrid");
+  grid.innerHTML = "";
+  for(const id of state.field){
+    if(!id) continue;
+    if(!scorerStep && id===goal.by) continue;
+    const b = document.createElement("button");
+    b.type="button"; b.textContent = BY_ID[id].first;
+    b.addEventListener("click", ()=>{
+      if(scorerStep){
+        goal.by = id;
+        if(goal.a===id) goal.a=null;
+        sheet.step = "assist";
+        commit(); renderSheet();
+      }else{
+        goal.a = id;
+        closeSheet(); commit();
+      }
+    });
+    grid.appendChild(b);
+  }
+}
+$("sheetskip").addEventListener("click", ()=>{
+  if(!sheet) return;
+  const goal = state.game.goals[sheet.goalIdx];
+  if(goal && sheet.step==="assist") goal.a = null;
+  closeSheet(); commit();
+});
+$("sheetback").addEventListener("click", (e)=>{
+  if(e.target===$("sheetback")) closeSheet();
+});
+
+setInterval(()=>{
+  const g = state.game;
+  if(g.phase==="ht"){ tickClock(); return; }   // halftime countdown runs on wall clock
+  if(!g.running) return;
+  tickClock();
+  document.querySelectorAll("[data-pid]").forEach(applyMins);
+}, 1000);
+
+// --- persistence ---
+// From kickoff to full time the board must never touch the network: a cloud
+// save re-runs the open page, and on a weak sideline signal that re-run can
+// hang the board. Everything stays in localStorage until the game ends.
+function inGame(){ return state.game.phase==="h1" || state.game.phase==="ht" || state.game.phase==="h2"; }
+function commit(){
+  state.savedAt = Date.now();
+  dirty = true;
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(e){}
+  render();
+  if(inGame()){
+    setSaveText("Saved on this phone", true);
+    clearTimeout(publishTimer);
+    return;
+  }
+  setSaveText(canPublish ? "Saving…" : "Saved on this phone", canPublish ? false : true);
+  clearTimeout(publishTimer);
+  publishTimer = setTimeout(publishNow, 2000);
+}
+function setSaveText(t, ok){
+  saveEl.textContent = t;
+  saveEl.classList.toggle("ok", !!ok);
+}
+function buildDoc(){
+  const json = JSON.stringify(state).replace(/</g,"\\u003c");
+  return TEMPLATE.replace(
+    /<script type="application\/json" id="state">[\s\S]*?<\/script>/,
+    '<script type="application/json" id="state">'+json+'<\/script>'
+  );
+}
+async function publishNow(){
+  if(!canPublish || !dirty || inGame()) return;
+  dirty = false;
+  try{
+    await artifactNS.publish(buildDoc());
+    setSaveText("Saved", true);
+  }catch(err){
+    if(err && err.code==="conflict") return; // page reloads to the winning version
+    dirty = true;
+    setSaveText("Saved on this phone", true);
+  }
+}
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState!=="hidden") return;
+  if(state.game.running){ gFlush(); commit(); }
+  if(dirty && !inGame()){ clearTimeout(publishTimer); publishNow(); }
+});
+
+let bootTab = "game";
+try{
+  const t = sessionStorage.getItem("eagles-tab");
+  if(TABS.includes(t)) bootTab = t;
+}catch(e){}
+render();
+switchTab(bootTab);
+setSaveText("", false);
+
+(async ()=>{
+  const ns = await (window.claude && window.claude.use ? window.claude.use("artifact") : null);
+  if(ns){ artifactNS = ns; canPublish = true; if(dirty) publishNow(); }
+  else if(!saveEl.textContent) setSaveText("Saved on this phone", true);
+})();
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+</script>
+
+</body>
+</html>
